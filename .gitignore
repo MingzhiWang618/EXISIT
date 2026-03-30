@@ -1,0 +1,26 @@
+# dataset
+data/
+dataset/
+
+# checkpoints
+checkpoints/
+*.pth
+*.pt
+*.ckpt
+
+# logs
+logs/
+runs/
+wandb/
+
+# cache
+__pycache__/
+*.pyc
+
+# numpy / large files
+*.npy
+*.npz
+*.pkl
+
+# system
+.DS_Store
