@@ -28,20 +28,20 @@ class Config:
     fs          = 1000        # PME4 采样率
 
     # ── 模型超参数 (已根据 Student 类默认值对齐) ──────────────────────────────────
-    num_nodes   = 32          # 实际运行时会自动从数据中修正
+    num_nodes   = 8          # 实际运行时会自动从数据中修正
     in_features = 5           # DE 特征通常为 5 个频带
     gcn_hidden  = 64
     gcn_out     = 64
-    lstm_hidden = 128
-    lstm_layers = 2
-    fc_hidden   = 256
-    num_classes = 4           
+    lstm_hidden = 64
+    lstm_layers = 1
+    fc_hidden   = 64
+    num_classes = 2           
     dropout     = 0.5
 
     # ── 训练参数 ──────────────────────────────────────────────────────────────
     batch_size   = 64
     epochs       = 150
-    lr           = 1e-4
+    lr           = 5e-4
     weight_decay = 1e-3
     patience     = 30
 
@@ -172,7 +172,7 @@ def train(cfg: Config):
     ).to(cfg.device)
 
     # 3. 损失函数与优化器
-    criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
+    criterion = nn.CrossEntropyLoss()
     # criterion = nn.CrossEntropyLoss(weight=torch.tensor([1,1,1,2], dtype=torch.float).to(cfg.device))
     optimizer = optim.Adam(model.parameters(), lr=cfg.lr, weight_decay=cfg.weight_decay)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', factor=0.5, patience=7)
@@ -190,8 +190,8 @@ def train(cfg: Config):
         scheduler.step(val_res['acc'])
         elapsed = time.time() - t0
 
-        print(f"Epoch {epoch:>3} | Train Loss: {train_res['loss']:.4f} Acc: {train_res['acc']:.4f} | "
-              f"Val Loss: {val_res['loss']:.4f} Acc: {val_res['acc']:.4f} | "
+        print(f"Epoch {epoch:>3} | Train Loss: {train_res['loss']:.4f} Acc: {train_res['acc']:.4f} F1: {train_res['f1']:.4f} | "
+              f"Val Loss: {val_res['loss']:.4f} Acc: {val_res['acc']:.4f} F1: {val_res['f1']:.4f} | "
               f"LR: {optimizer.param_groups[0]['lr']:.2e} | {elapsed:.1f}s")
 
         if val_res['acc'] > best_val_acc:

@@ -49,15 +49,6 @@ class EEGNet(nn.Module):
             nn.Flatten(),
             nn.Linear(flatten_dim, num_classes)
         )
-    
-    def forward(self, x):
-        # x shape: (batch, channels, features) -> (batch, 1, channels, features)
-        x = x.unsqueeze(1)
-        x = self.first_conv(x)
-        x = self.depthwise_conv(x)
-        x = self.separable_conv(x)
-        x = self.classifier(x)
-        return x
 
 # 导入数据集加载器
 from dataset.dataset import create_single_modality_dataloaders
@@ -156,11 +147,12 @@ def main():
     # 加载数据（使用原始EEG特征和归一化）
     print("\n🚀 加载原始EEG特征数据...")
     train_loader, val_loader, test_loader = create_single_modality_dataloaders(
+        segment_1s=False,
         data_root_dict=DATA_ROOT_DICT,
         modality='eeg',
         batch_size=BATCH_SIZE,
-        extract_de=False,  
-        normalize=True    
+        extract_de=False,  # 使用原始EEG特征
+        normalize=True    # 进行z-score归一化
     )
     
     # 检查数据形状

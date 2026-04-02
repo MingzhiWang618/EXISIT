@@ -8,6 +8,7 @@ from torch.utils.data import Dataset, DataLoader
 import numpy as np
 from tqdm import tqdm
 from typing import Optional
+from sklearn.metrics import f1_score
 from dataset.dataset import CrossSubjectMultiModalDataset
 from KDbaseline.model.Teacher import TeacherModel
 from KDbaseline.model.Student import ST_GCLSTM
@@ -133,6 +134,8 @@ def run_epoch(stage, student, teacher, regressor,
     tag = 'Train' if is_train else 'Val  '
 
     total_loss = correct = total = 0
+    all_preds = []
+    all_labels = []
     pbar = tqdm(loader, desc=f"[{tag}] Epoch {epoch:03d}", leave=False)
 
     ctx = torch.enable_grad() if is_train else torch.no_grad()
@@ -173,7 +176,10 @@ def run_epoch(stage, student, teacher, regressor,
             total      += B
             total_loss += loss.item() * B
             if stage == 2:
-                correct += (s_out['logits'].argmax(1) == labels).sum().item()
+                preds = s_out['logits'].argmax(1)
+                correct += (preds == labels).sum().item()
+                all_preds.extend(preds.cpu().numpy())
+                all_labels.extend(labels.cpu().numpy())
 
             post = {'loss': f"{total_loss / total:.4f}"}
             if stage == 2:
@@ -182,7 +188,10 @@ def run_epoch(stage, student, teacher, regressor,
 
     avg_loss = total_loss / total
     avg_acc  = correct / total if stage == 2 else None
-    return avg_loss, avg_acc
+    avg_f1   = None
+    if stage == 2 and len(all_preds) > 0:
+        avg_f1 = f1_score(all_labels, all_preds, average='weighted', zero_division=0)
+    return avg_loss, avg_acc, avg_f1
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -267,10 +276,10 @@ def main():
     hint_ckpt      = os.path.join(SAVE_DIR, 'best_hint_regressor.pth')
 
     for epoch in range(1, EPOCHS_STAGE1 + 1):
-        tr_loss, _ = run_epoch(1, student, teacher, regressor,
-                               train_loader, opt1, device, epoch, is_train=True)
-        va_loss, _ = run_epoch(1, student, teacher, regressor,
-                               val_loader,   opt1, device, epoch, is_train=False)
+        tr_loss, _, _ = run_epoch(1, student, teacher, regressor,
+                                  train_loader, opt1, device, epoch, is_train=True)
+        va_loss, _, _ = run_epoch(1, student, teacher, regressor,
+                                  val_loader,   opt1, device, epoch, is_train=False)
 
         flag = ''
         if va_loss < best_hint_loss:
@@ -325,15 +334,15 @@ def main():
           f"(CE + soft-label KD,  {EPOCHS_STAGE2} epochs)")
     print(f"{'='*60}")
     print(f"  {'Epoch':>5}  {'LR':>8}  "
-          f"{'Tr-Loss':>8} {'Tr-Acc':>7}  "
-          f"{'Va-Loss':>8} {'Va-Acc':>7}")
+          f"{'Tr-Loss':>8} {'Tr-Acc':>7} {'Tr-F1':>7}  "
+          f"{'Va-Loss':>8} {'Va-Acc':>7} {'Va-F1':>7}")
     print(f"{'='*60}")
 
     for epoch in range(1, EPOCHS_STAGE2 + 1):
-        tr_loss, tr_acc = run_epoch(2, student, teacher, regressor,
-                                    train_loader, opt2, device, epoch, is_train=True)
-        va_loss, va_acc = run_epoch(2, student, teacher, regressor,
-                                    val_loader,   opt2, device, epoch, is_train=False)
+        tr_loss, tr_acc, tr_f1 = run_epoch(2, student, teacher, regressor,
+                                           train_loader, opt2, device, epoch, is_train=True)
+        va_loss, va_acc, va_f1 = run_epoch(2, student, teacher, regressor,
+                                           val_loader,   opt2, device, epoch, is_train=False)
         scheduler.step()
         lr_now = scheduler.get_last_lr()[0]
 
@@ -350,8 +359,8 @@ def main():
             flag = f'  (patience {patience_count}/{PATIENCE})'
 
         print(f"  {epoch:5d}  {lr_now:8.2e}  "
-              f"{tr_loss:8.4f} {tr_acc:7.4f}  "
-              f"{va_loss:8.4f} {va_acc:7.4f}{flag}")
+              f"{tr_loss:8.4f} {tr_acc:7.4f} {tr_f1:7.4f}  "
+              f"{va_loss:8.4f} {va_acc:7.4f} {va_f1:7.4f}{flag}")
 
         if patience_count >= PATIENCE:
             print(f"\n⏹️  Early stopping at epoch {epoch}")
@@ -361,10 +370,11 @@ def main():
     print(f"\n🔍 Best val acc: {best_val_acc:.4f}  →  {ckpt_path}")
     student.load_state_dict(torch.load(ckpt_path, map_location=device)['model_state'])
 
-    te_loss, te_acc = run_epoch(2, student, teacher, regressor,
-                                test_loader, None, device, 0, is_train=False)
+    te_loss, te_acc, te_f1 = run_epoch(2, student, teacher, regressor,
+                                        test_loader, None, device, 0, is_train=False)
     print(f"\n{'='*40}")
     print(f"  Test Acc  : {te_acc:.4f}")
+    print(f"  Test F1   : {te_f1:.4f}")
     print(f"  Test Loss : {te_loss:.4f}")
     print(f"{'='*40}\n")
 

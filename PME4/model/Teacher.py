@@ -94,7 +94,7 @@ class SpatialAttention(nn.Module):
         super().__init__()
         self.Wq          = nn.Linear(in_features, dk, bias=False)
         self.Wk          = nn.Linear(in_features, dk, bias=False)
-        self.temperature = 1e-1
+        self.temperature = 1
         self.av_cross_attn = AVCrossAttention(av_dim, in_features, dk)
         nn.init.xavier_uniform_(self.Wq.weight)
         nn.init.xavier_uniform_(self.Wk.weight)

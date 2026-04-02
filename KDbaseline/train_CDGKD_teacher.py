@@ -1,17 +1,15 @@
+# train_teacher_proto.py
 import os
 import sys
 sys.path.append('/data2/mingzhi/BCI/WMZ_BCI/archieve')
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
 import numpy as np
 from tqdm import tqdm
 from typing import Optional
-from sklearn.metrics import f1_score
 from dataset.dataset import CrossSubjectMultiModalDataset
-from KDbaseline.model.Teacher import TeacherModel
-from KDbaseline.model.Student import ST_GCLSTM
+from model.CDGKD_Teacher import TeacherModel, TeacherLoss
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -28,7 +26,8 @@ AUDIO_DIM    = 25
 VISION_DIM   = 161
 NUM_CLASSES  = 5
 BATCH_SIZE   = 64
-LR           = 5e-5
+EPOCHS       = 150
+LR           = 5e-4
 WEIGHT_DECAY = 1e-4
 
 NUM_NODES    = 30
@@ -41,15 +40,14 @@ FC_HIDDEN    = 64
 DROPOUT      = 0.5
 AV_HIDDEN    = 64
 
-EPOCHS       = 150
+ALPHA        = 0.5    # 论文中 α，控制 CE 与 prototype loss 的权重
+MOMENTUM     = 0.9    # prototype EMA 动量
 PATIENCE     = 20
-MMD_LAMBDA   = 1.0      # MMD 损失权重
 SAVE_DIR     = './checkpoints'
 DEVICE       = 'cuda'
-TEACHER_CKPT = './checkpoints/best_teacher.pth'
 
-STUDENT_DIM  = LSTM_HIDDEN * 2         # 128
-TEACHER_DIM  = LSTM_HIDDEN * 2 + AV_HIDDEN * 4  # 384
+AV_DIM  = AV_HIDDEN * 4    # audio out_dim + vision out_dim = 64*2 + 64*2 = 256
+EEG_DIM = LSTM_HIDDEN * 2  # 128
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -104,51 +102,14 @@ def build_loaders(vision_max_len=None):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# MMD 损失（多项式核）
-# ═══════════════════════════════════════════════════════════════════════════════
-
-def mmd_loss(f_s: torch.Tensor, f_t: torch.Tensor) -> torch.Tensor:
-    """
-    f_s: [B, D]  Student 特征（经过 regressor 投影后）
-    f_t: [B, D]  Teacher fused 特征
-    多项式核：k(x, y) = (x·yᵀ / D + 1)²
-    """
-    D  = f_s.size(1)
-    ss = (f_s @ f_s.T / D + 1).pow(2)
-    tt = (f_t @ f_t.T / D + 1).pow(2)
-    st = (f_s @ f_t.T / D + 1).pow(2)
-    return ss.mean() + tt.mean() - 2 * st.mean()
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# Regressor：student eeg_feat [B,128] → teacher fused [B,384]
-# ═══════════════════════════════════════════════════════════════════════════════
-
-class Regressor(nn.Module):
-    def __init__(self, student_dim: int, teacher_dim: int):
-        super().__init__()
-        self.proj = (
-            nn.Linear(student_dim, teacher_dim)
-            if student_dim != teacher_dim else nn.Identity()
-        )
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.proj(x)
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # 单 epoch
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def run_epoch(student, teacher, regressor,
-              loader, optimizer, device, epoch, is_train):
-
-    student.train() if is_train else student.eval()
+def run_epoch(model, loader, criterion, optimizer, device, is_train, epoch):
+    model.train() if is_train else model.eval()
     tag = 'Train' if is_train else 'Val  '
 
-    total_loss = total_ce = total_mmd = correct = total = 0
-    all_preds = []
-    all_labels = []
+    total_loss = total_ce = correct = total = 0
     pbar = tqdm(loader, desc=f"[{tag}] Epoch {epoch:03d}", leave=False)
 
     ctx = torch.enable_grad() if is_train else torch.no_grad()
@@ -158,45 +119,31 @@ def run_epoch(student, teacher, regressor,
                 eeg.to(device), pcc.to(device),
                 audio.to(device), vision.to(device), labels.to(device))
 
-            with torch.no_grad():
-                t_out = teacher(eeg, pcc, audio, vision)
-
-            s_out = student(eeg, pcc)
-
-            l_ce  = F.cross_entropy(s_out['logits'], labels)
-            l_mmd = mmd_loss(
-                regressor(s_out['eeg_feat']),
-                t_out['fused'].detach(),
-            )
-            loss = l_ce + MMD_LAMBDA * l_mmd
+            out    = model(eeg, pcc, audio, vision)
+            losses = criterion(out, labels)
+            loss   = losses['loss']
 
             if is_train:
                 optimizer.zero_grad()
                 loss.backward()
-                nn.utils.clip_grad_norm_(
-                    list(student.parameters()) + list(regressor.parameters()), 1.0)
+                nn.utils.clip_grad_norm_(model.parameters(), 1.0)
                 optimizer.step()
 
             B           = labels.size(0)
             total      += B
-            total_loss += loss.item()  * B
-            total_ce   += l_ce.item()  * B
-            total_mmd  += l_mmd.item() * B
-            preds = s_out['logits'].argmax(1)
-            correct += (preds == labels).sum().item()
-            all_preds.extend(preds.cpu().numpy())
-            all_labels.extend(labels.cpu().numpy())
+            total_loss += loss.item()              * B
+            total_ce   += losses['loss_ce'].item() * B
+            correct    += (out['logits'].argmax(1) == labels).sum().item()
 
             pbar.set_postfix({
-                'loss': f"{total_loss / total:.4f}",
-                'ce'  : f"{total_ce   / total:.4f}",
-                'mmd' : f"{total_mmd  / total:.4f}",
-                'acc' : f"{correct    / total:.4f}",
+                'loss'   : f"{total_loss / total:.4f}",
+                'ce'     : f"{total_ce   / total:.4f}",
+                'acc'    : f"{correct    / total:.4f}",
+                'λ_av'   : f"{losses['lam_av'].item():.3f}",
+                'λ_eeg'  : f"{losses['lam_eeg'].item():.3f}",
             })
 
-    n = total
-    avg_f1 = f1_score(all_labels, all_preds, average='weighted', zero_division=0) if len(all_preds) > 0 else 0.0
-    return total_loss / n, total_ce / n, total_mmd / n, correct / n, avg_f1
+    return total_loss / total, total_ce / total, correct / total
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -211,8 +158,7 @@ def main():
     print("\n📦 Loading data ...")
     train_loader, val_loader, test_loader = build_loaders()
 
-    # ── Teacher（加载预训练权重，全程冻结）────────────────────────────────────
-    teacher = TeacherModel(
+    model = TeacherModel(
         audio_input_dim  = AUDIO_DIM,
         vision_input_dim = VISION_DIM,
         av_hidden_dim    = AV_HIDDEN,
@@ -229,64 +175,41 @@ def main():
         num_classes      = NUM_CLASSES,
     ).to(device)
 
-    ckpt = torch.load(TEACHER_CKPT, map_location=device)
-    teacher.load_state_dict(ckpt['model_state'])
-    teacher.eval()
-    for p in teacher.parameters():
-        p.requires_grad_(False)
-    print(f"Teacher loaded  (best val acc: {ckpt.get('best_val_acc', '?'):.4f})")
+    print(f"Params : {sum(p.numel() for p in model.parameters() if p.requires_grad):,}")
 
-    # ── Student ───────────────────────────────────────────────────────────────
-    student = ST_GCLSTM(
-        num_nodes   = NUM_NODES,
-        in_features = IN_FEATURES,
-        gcn_hidden  = GCN_HIDDEN,
-        gcn_out     = GCN_OUT,
-        lstm_hidden = LSTM_HIDDEN,
-        lstm_layers = LSTM_LAYERS,
-        fc_hidden   = FC_HIDDEN,
+    criterion = TeacherLoss(
         num_classes = NUM_CLASSES,
-        dropout     = DROPOUT,
+        av_dim      = AV_DIM,
+        eeg_dim     = EEG_DIM,
+        alpha       = ALPHA,
+        momentum    = MOMENTUM,
     ).to(device)
-    print(f"Student params : {sum(p.numel() for p in student.parameters() if p.requires_grad):,}")
 
-    # ── Regressor ─────────────────────────────────────────────────────────────
-    regressor = Regressor(
-        student_dim = STUDENT_DIM,   # 128
-        teacher_dim = TEACHER_DIM,   # 384
-    ).to(device)
-    print(f"Regressor      : {STUDENT_DIM} → {TEACHER_DIM}")
-
-    # ── Optimizer & Scheduler ─────────────────────────────────────────────────
-    optimizer = torch.optim.AdamW(
-        list(student.parameters()) + list(regressor.parameters()),
-        lr=LR, weight_decay=WEIGHT_DECAY,
-    )
+    optimizer = torch.optim.AdamW(model.parameters(),
+                                  lr=LR, weight_decay=WEIGHT_DECAY)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-        optimizer, T_max=EPOCHS, eta_min=LR * 0.01,
-    )
+                    optimizer, T_max=EPOCHS, eta_min=LR * 0.01)
 
-    # ── 训练循环 ──────────────────────────────────────────────────────────────
     best_val_acc   = 0.0
     patience_count = 0
-    ckpt_path      = os.path.join(SAVE_DIR, 'best_student_nst.pth')
+    ckpt_path      = os.path.join(SAVE_DIR, 'best_teacher_proto.pth')
 
-    print(f"\n{'='*75}")
-    print("  NST Distillation  (CE + MMD,  single stage)")
-    print(f"{'='*75}")
+    print(f"\n{'='*65}")
+    print("  Teacher training with Prototype-Based Modality Rebalancing")
+    print(f"{'='*65}")
     print(f"  {'Epoch':>5}  {'LR':>8}  "
-          f"{'Tr-Loss':>8} {'Tr-CE':>7} {'Tr-MMD':>7} {'Tr-Acc':>7} {'Tr-F1':>7}  "
-          f"{'Va-Loss':>8} {'Va-Acc':>7} {'Va-F1':>7}")
-    print(f"{'='*75}")
+          f"{'Tr-Loss':>8} {'Tr-CE':>7} {'Tr-Acc':>7}  "
+          f"{'Va-Loss':>8} {'Va-Acc':>7}")
+    print(f"{'='*65}")
 
     for epoch in range(1, EPOCHS + 1):
-        tr_loss, tr_ce, tr_mmd, tr_acc, tr_f1 = run_epoch(
-            student, teacher, regressor,
-            train_loader, optimizer, device, epoch, is_train=True)
+        tr_loss, tr_ce, tr_acc = run_epoch(
+            model, train_loader, criterion, optimizer,
+            device, is_train=True, epoch=epoch)
 
-        va_loss, va_ce, va_mmd, va_acc, va_f1 = run_epoch(
-            student, teacher, regressor,
-            val_loader, optimizer, device, epoch, is_train=False)
+        va_loss, va_ce, va_acc = run_epoch(
+            model, val_loader, criterion, optimizer,
+            device, is_train=False, epoch=epoch)
 
         scheduler.step()
         lr_now = scheduler.get_last_lr()[0]
@@ -297,8 +220,8 @@ def main():
             patience_count = 0
             torch.save({
                 'epoch'       : epoch,
-                'model_state' : student.state_dict(),
-                'regressor'   : regressor.state_dict(),
+                'model_state' : model.state_dict(),
+                'criterion'   : criterion.state_dict(),  # 保存 prototype buffer
                 'best_val_acc': best_val_acc,
             }, ckpt_path)
             flag = '  ✅'
@@ -307,28 +230,24 @@ def main():
             flag = f'  (patience {patience_count}/{PATIENCE})'
 
         print(f"  {epoch:5d}  {lr_now:8.2e}  "
-              f"{tr_loss:8.4f} {tr_ce:7.4f} {tr_mmd:7.4f} {tr_acc:7.4f} {tr_f1:7.4f}  "
-              f"{va_loss:8.4f} {va_acc:7.4f} {va_f1:7.4f}{flag}")
+              f"{tr_loss:8.4f} {tr_ce:7.4f} {tr_acc:7.4f}  "
+              f"{va_loss:8.4f} {va_acc:7.4f}{flag}")
 
         if patience_count >= PATIENCE:
             print(f"\n⏹️  Early stopping at epoch {epoch}")
             break
 
-    # ── 测试 ──────────────────────────────────────────────────────────────────
     print(f"\n🔍 Best val acc: {best_val_acc:.4f}  →  {ckpt_path}")
-    student.load_state_dict(
+    model.load_state_dict(
         torch.load(ckpt_path, map_location=device)['model_state'])
 
-    te_loss, te_ce, te_mmd, te_acc, te_f1 = run_epoch(
-        student, teacher, regressor,
-        test_loader, None, device, 0, is_train=False)
+    te_loss, te_ce, te_acc = run_epoch(
+        model, test_loader, criterion, None,
+        device, is_train=False, epoch=0)
 
     print(f"\n{'='*40}")
     print(f"  Test Acc  : {te_acc:.4f}")
-    print(f"  Test F1   : {te_f1:.4f}")
     print(f"  Test Loss : {te_loss:.4f}")
-    print(f"  Test CE   : {te_ce:.4f}")
-    print(f"  Test MMD  : {te_mmd:.4f}")
     print(f"{'='*40}\n")
 
 

@@ -9,7 +9,7 @@ class SpatialAttention(nn.Module):
         super().__init__()
         self.W1 = nn.Linear(in_features, in_features, bias=False)
         self.W2 = nn.Linear(in_features, in_features, bias=False)
-        self.temperature = 1e-1
+        self.temperature = 1
 
     def forward(self, x):
         # x: [B*T, N, D]
