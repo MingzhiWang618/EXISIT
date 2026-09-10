@@ -34,3 +34,13 @@ The runner defaults to the local project paths used for the rebuttal rerun.
 They can be changed with `--archive`, `--teacher-root`, and `--pme4-data`.
 See [results/candidate_split0_seed2024.md](results/candidate_split0_seed2024.md)
 for the measured result and its limits.
+
+Run the coarse validation-ranked search with:
+
+```bash
+python -u experiments/search_distillation.py --dataset eav --device cuda:0
+python -u experiments/search_distillation.py --dataset pme4 --device cuda:0
+```
+
+The latest search and cross-split validation are documented in
+[results/parameter_search_seed2024.md](results/parameter_search_seed2024.md).

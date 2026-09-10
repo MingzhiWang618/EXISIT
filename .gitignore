@@ -13,6 +13,8 @@ logs/
 runs/
 wandb/
 candidate_outputs/
+search_outputs/
+validation_outputs/
 
 # cache
 __pycache__/

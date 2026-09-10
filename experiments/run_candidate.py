@@ -32,7 +32,13 @@ def main(a):
     teacher=teacher_dir/f"teacher_{a.dataset}_split{a.split}_best.pt"
     if a.dataset=="eav" and a.seed!=2024: teacher=teacher_dir/f"teacher_eav_split{a.split}_seed{a.seed}_best.pt"
     shutil.copy2(teacher,ckpt/f"teacher_{a.dataset}_split{a.split}_best.pt")
-    criterion=StableDistillationLoss(DistillationConfig()).to(a.device); epoch={"value":0}; batches=[]; history=[]
+    loss_config=DistillationConfig(
+        alpha=a.alpha, cdd_ratio=a.cdd_ratio, edd_ratio=1.0-a.cdd_ratio,
+        warmup_epochs=a.warmup_epochs, cdd_temperature=a.cdd_temperature,
+        edd_temperature=a.edd_temperature, ema_decay=a.ema_decay,
+        confidence_floor=a.confidence_floor,
+    )
+    criterion=StableDistillationLoss(loss_config).to(a.device); epoch={"value":0}; batches=[]; history=[]
     def loss_fn(cfg,s,t,y):
         values=criterion(s,t,y,epoch["value"]); batches.append({k:float(v.detach()) for k,v in values.items()}); return values["loss"]
     base_epoch=original.run_epoch
@@ -48,6 +54,8 @@ def main(a):
         return result
     original.distill_loss=loss_fn; original.run_epoch=run_epoch
     cfg=original.Config(); cfg.seed=a.seed; cfg.device=a.device
+    if a.epochs is not None: cfg.epochs=a.epochs
+    if a.patience is not None: cfg.patience=a.patience
     result=original.train(cfg,a.split)
     payload={"dataset":a.dataset,"split":a.split,"split_seed":100+a.split,"seed":a.seed,
              "candidate":"stable_attention_ema_warmup_confidence","loss_config":vars(criterion.config),
@@ -61,4 +69,13 @@ if __name__=="__main__":
     p.add_argument("--archive",default="/data2/mingzhi/BCI/WMZ_BCI/archieve")
     p.add_argument("--teacher-root",default="/data2/mingzhi/BCI/WMZ_BCI/EXIST/rebuttal_rerun/outputs_3x3")
     p.add_argument("--pme4-data",default="/data2/zhiwen/bci/dataset/PME4")
+    p.add_argument("--alpha",type=float,default=0.5)
+    p.add_argument("--cdd-ratio",type=float,default=0.5)
+    p.add_argument("--warmup-epochs",type=int,default=10)
+    p.add_argument("--cdd-temperature",type=float,default=2.0)
+    p.add_argument("--edd-temperature",type=float,default=1.0)
+    p.add_argument("--ema-decay",type=float,default=0.95)
+    p.add_argument("--confidence-floor",type=float,default=0.1)
+    p.add_argument("--epochs",type=int)
+    p.add_argument("--patience",type=int)
     p.add_argument("--output",default="candidate_outputs"); main(p.parse_args())
