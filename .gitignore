@@ -12,6 +12,7 @@ checkpoints/
 logs/
 runs/
 wandb/
+candidate_outputs/
 
 # cache
 __pycache__/

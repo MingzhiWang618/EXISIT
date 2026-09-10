@@ -83,7 +83,7 @@ class TemporalAttention(nn.Module):
         self.v  = nn.Linear(hidden_size, 1, bias=False)
 
     def forward(self, h: torch.Tensor):
-        score   = self.v(self.fc(h)).squeeze(-1)      # [B, T]
+        score   = self.v(torch.tanh(self.fc(h))).squeeze(-1)      # [B, T]
         weights = F.softmax(score, dim=-1)             # [B, T]
         context = torch.bmm(weights.unsqueeze(1), h).squeeze(1)  # [B, H]
         return context, weights
@@ -114,7 +114,8 @@ class AttentionBiLSTM(nn.Module):
 
     def forward(self, x: torch.Tensor):
         h, _ = self.bilstm(x)
-        return self.attn(self.drop(h))   # [B, H*2], [B, T]
+        context, weights = self.attn(h)
+        return self.drop(context), weights   # stable attention; dropout only on representation
 
 
 class ST_GCLSTM(nn.Module):

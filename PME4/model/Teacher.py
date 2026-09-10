@@ -167,7 +167,7 @@ class TemporalAttention(nn.Module):
         self.av_cross_attn = AVCrossAttention(av_dim, hidden_size, dk)
 
     def forward(self, h: torch.Tensor, av_ctx: torch.Tensor):
-        e       = self.v(self.fc(h)).squeeze(-1)
+        e       = self.v(torch.tanh(self.fc(h))).squeeze(-1)
         beta    = self.av_cross_attn(av_ctx, h)
         weights = F.softmax(e + beta, dim=-1)
         context = torch.bmm(weights.unsqueeze(1), h).squeeze(1)
@@ -198,7 +198,8 @@ class AttentionBiLSTM(nn.Module):
 
     def forward(self, x: torch.Tensor, av_ctx: torch.Tensor):
         h, _ = self.bilstm(x)
-        return self.attn(self.drop(h), av_ctx)
+        context, weights = self.attn(h, av_ctx)
+        return self.drop(context), weights
 
 
 def build_classifier(in_dim: int, fc_hidden: int,
