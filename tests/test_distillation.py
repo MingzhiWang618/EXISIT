@@ -34,5 +34,16 @@ class StableDistillationTests(unittest.TestCase):
         self.assertAlmostEqual(criterion(s,t,torch.tensor([0,1]),1)["strength"].item(), .05, places=6)
         self.assertAlmostEqual(criterion(s,t,torch.tensor([0,1]),20)["strength"].item(), .5, places=6)
 
+    def test_logit_distillation_contributes_to_loss(self):
+        s = {"logits":torch.randn(2,3), "S_attn":torch.ones(2,2,4,4)/4,
+             "attn_t":torch.ones(2,2)/2}
+        t = {"logits":torch.randn(2,3), "S_attn":torch.ones(2,2,4,4)/4,
+             "attn_t":torch.ones(2,2)/2}
+        out = StableDistillationLoss(DistillationConfig(alpha=0, logit_weight=.5))(
+            s,t,torch.tensor([0,1]),1)
+        self.assertGreaterEqual(out["logit"].item(), 0)
+        self.assertAlmostEqual(out["loss"].item(),
+                               (out["ce"]+.5*out["logit"]).item(), places=6)
+
 
 if __name__ == "__main__": unittest.main()

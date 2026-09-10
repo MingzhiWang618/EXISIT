@@ -16,6 +16,8 @@ class DistillationConfig:
     edd_temperature: float = 1.0
     ema_decay: float = 0.95
     confidence_floor: float = 0.1
+    logit_weight: float = 0.0
+    logit_temperature: float = 2.0
     eps: float = 1e-6
 
 
@@ -65,6 +67,17 @@ class StableDistillationLoss(nn.Module):
         edd_each = kl_rows(s_edd, t_edd, cfg.eps)
         edd_weight = confidence(t_edd, cfg.confidence_floor, cfg.eps)
         edd = (edd_each*edd_weight).sum() / edd_weight.sum().clamp_min(cfg.eps)
+        logit = ce.new_zeros(())
+        if cfg.logit_weight:
+            temperature = cfg.logit_temperature
+            teacher_logits = teacher.get("logits", teacher.get("eeg_logits"))
+            if teacher_logits is None:
+                raise KeyError("teacher output needs 'logits' or 'eeg_logits' for logit distillation")
+            logit = F.kl_div(
+                F.log_softmax(student["logits"] / temperature, dim=-1),
+                F.softmax(teacher_logits.detach() / temperature, dim=-1),
+                reduction="batchmean",
+            ) * temperature**2
         if self.training:
             self._update_ema("ema_cdd", cdd)
             self._update_ema("ema_edd", edd)
@@ -72,7 +85,8 @@ class StableDistillationLoss(nn.Module):
         normalized_edd = edd / self.ema_edd.clamp_min(cfg.eps).detach()
         strength = cfg.alpha * min(1.0, epoch / max(cfg.warmup_epochs, 1))
         distillation = strength * (cfg.cdd_ratio*normalized_cdd + cfg.edd_ratio*normalized_edd)
-        total = ce + distillation
+        total = ce + distillation + cfg.logit_weight * logit
         return {"loss": total, "ce": ce, "cdd": cdd, "edd": edd,
+                "logit": logit,
                 "normalized_cdd": normalized_cdd, "normalized_edd": normalized_edd,
                 "distillation": distillation, "strength": total.new_tensor(strength)}

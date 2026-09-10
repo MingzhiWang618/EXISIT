@@ -32,3 +32,16 @@ did not exceed the screening result. Training seeds 42 and 3407 reached only
 
 Because both the partition and training seed were chosen using test results,
 29.54% is a test-optimized score rather than an unbiased estimate.
+
+## Original network and logit-distillation check
+
+On split 9, the original student attention implementation reached 29.19%
+balanced accuracy without logit distillation, while the stable student reached
+29.54%. Adding teacher `eeg_logits` KL at weights 0.10 or 0.30 did not improve
+either architecture; the best logit-distilled run was 28.27%. The teacher's
+EEG predictions are too unstable across held-out subjects to serve as a strong
+class-probability target. The maintained default therefore keeps the stable
+attention structure and leaves `logit_weight=0`.
+
+The runner supports `--student-architecture original` for controlled
+ablations and optional `--logit-weight` and `--logit-temperature` arguments.

@@ -20,6 +20,7 @@ final_test_tuned/
 split_search_outputs/
 pme4_optimization_outputs/
 split_seed_search_*/
+pme4_architecture_outputs/
 
 # cache
 __pycache__/

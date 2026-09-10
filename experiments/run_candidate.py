@@ -20,11 +20,13 @@ def main(a):
     sys.path.insert(0, str(archive))
     sys.path.insert(0, str(source))
     original=load(f"candidate_{a.dataset}",source/f"run_{a.dataset}_distill.py")
+    archived_student_class=original.ST_GCLSTM
     teacher_file=archive/("multimodal" if a.dataset=="eav" else "PME4")/"model"/"Teacher.py"
     teacher_mod=load(f"frozen_teacher_{a.dataset}",teacher_file)
     original.TeacherModel=teacher_mod.TeacherModel
     student_mod=load(f"maintained_student_{a.dataset}",REPO/("multimodal" if a.dataset=="eav" else "PME4")/"model"/"Student.py")
-    original.ST_GCLSTM=student_mod.ST_GCLSTM
+    original.ST_GCLSTM=(archived_student_class if a.student_architecture=="original"
+                        else student_mod.ST_GCLSTM)
     if a.dataset=="pme4": original.DATA_ROOT=a.pme4_data
     output=Path(a.output).resolve()/a.dataset/f"split{a.split}"/f"seed{a.seed}"
     ckpt=output/"checkpoints"; ckpt.mkdir(parents=True,exist_ok=True); original.CKPT_DIR=str(ckpt)
@@ -36,7 +38,8 @@ def main(a):
         alpha=a.alpha, cdd_ratio=a.cdd_ratio, edd_ratio=1.0-a.cdd_ratio,
         warmup_epochs=a.warmup_epochs, cdd_temperature=a.cdd_temperature,
         edd_temperature=a.edd_temperature, ema_decay=a.ema_decay,
-        confidence_floor=a.confidence_floor,
+        confidence_floor=a.confidence_floor, logit_weight=a.logit_weight,
+        logit_temperature=a.logit_temperature,
     )
     criterion=StableDistillationLoss(loss_config).to(a.device); epoch={"value":0}; batches=[]; history=[]
     def loss_fn(cfg,s,t,y):
@@ -79,6 +82,9 @@ if __name__=="__main__":
     p.add_argument("--edd-temperature",type=float,default=1.0)
     p.add_argument("--ema-decay",type=float,default=0.95)
     p.add_argument("--confidence-floor",type=float,default=0.1)
+    p.add_argument("--logit-weight",type=float,default=0.0)
+    p.add_argument("--logit-temperature",type=float,default=2.0)
+    p.add_argument("--student-architecture",choices=("original","stable"),default="stable")
     p.add_argument("--epochs",type=int)
     p.add_argument("--patience",type=int)
     p.add_argument("--lr",type=float)
