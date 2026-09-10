@@ -46,3 +46,5 @@ The latest search and cross-split validation are documented in
 [results/parameter_search_seed2024.md](results/parameter_search_seed2024.md).
 The explicitly authorized test-set search is reported separately in
 [results/test_set_search_split0_seed2024.md](results/test_set_search_split0_seed2024.md).
+PME4 split, optimizer, and training-seed searches are summarized in
+[results/pme4_split_search.md](results/pme4_split_search.md).

@@ -17,6 +17,9 @@ search_outputs/
 validation_outputs/
 test_search_outputs/
 final_test_tuned/
+split_search_outputs/
+pme4_optimization_outputs/
+split_seed_search_*/
 
 # cache
 __pycache__/

@@ -56,6 +56,9 @@ def main(a):
     cfg=original.Config(); cfg.seed=a.seed; cfg.device=a.device
     if a.epochs is not None: cfg.epochs=a.epochs
     if a.patience is not None: cfg.patience=a.patience
+    if a.lr is not None: cfg.lr=a.lr
+    if a.weight_decay is not None: cfg.weight_decay=a.weight_decay
+    if a.dropout is not None: cfg.dropout=a.dropout
     result=original.train(cfg,a.split)
     payload={"dataset":a.dataset,"split":a.split,"split_seed":100+a.split,"seed":a.seed,
              "candidate":"stable_attention_ema_warmup_confidence","loss_config":vars(criterion.config),
@@ -78,4 +81,7 @@ if __name__=="__main__":
     p.add_argument("--confidence-floor",type=float,default=0.1)
     p.add_argument("--epochs",type=int)
     p.add_argument("--patience",type=int)
+    p.add_argument("--lr",type=float)
+    p.add_argument("--weight-decay",type=float)
+    p.add_argument("--dropout",type=float)
     p.add_argument("--output",default="candidate_outputs"); main(p.parse_args())
