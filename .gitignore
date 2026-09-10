@@ -21,6 +21,9 @@ split_search_outputs/
 pme4_optimization_outputs/
 split_seed_search_*/
 pme4_architecture_outputs/
+pme4_weight_search_wide/
+pme4_weight_search_fine/
+pme4_weight_best_full/
 
 # cache
 __pycache__/

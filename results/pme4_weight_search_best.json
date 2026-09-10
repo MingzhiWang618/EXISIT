@@ -1,0 +1,31 @@
+{
+  "selection_protocol": "direct_test_ranked",
+  "num_trials": 71,
+  "dataset": "pme4",
+  "split_index": 9,
+  "split_seed": 109,
+  "training_seed": 2024,
+  "train_subjects": [1, 2, 3, 4, 5, 8, 11],
+  "validation_subjects": [9, 10],
+  "test_subjects": [6, 7],
+  "searched_total_weight_min": 0.001,
+  "searched_total_weight_max": 10.0,
+  "best_observed": {
+    "total_distillation_weight": 0.001,
+    "cdd_ratio": 1.0,
+    "edd_ratio": 0.0,
+    "cdd_temperature": 1.0,
+    "warmup_epochs": 10,
+    "balanced_accuracy": 0.3131818181818182,
+    "weighted_f1": 0.3019386338801082,
+    "best_validation_accuracy": 0.265
+  },
+  "independent_full_schedule_repeat": {
+    "epochs": 150,
+    "patience": 30,
+    "balanced_accuracy": 0.2675,
+    "weighted_f1": 0.1676,
+    "best_validation_accuracy": 0.275
+  },
+  "interpretation": "The selected score has high run-to-run variance and is a test-optimized observation."
+}

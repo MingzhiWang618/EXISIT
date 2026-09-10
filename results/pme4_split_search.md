@@ -33,6 +33,27 @@ did not exceed the screening result. Training seeds 42 and 3407 reached only
 Because both the partition and training seed were chosen using test results,
 29.54% is a test-optimized score rather than an unbiased estimate.
 
+## Wide distillation-weight search
+
+We evaluated 71 test-ranked configurations on split 9 with training seed 2024.
+The total CDD/EDD weight covered 0.001 through 10.0; the CDD share covered
+0%, 25%, 50%, 75%, and 100%, and a fine search varied the CDD temperature over
+0.5, 1.0, 2.0, and 4.0.
+
+The highest observed screening result used total weight **0.001**, pure CDD
+(CDD/EDD = **1.0/0.0**), CDD temperature **1.0**, and a 10-epoch linear
+warmup. It reached **31.32%** balanced accuracy and **30.19%** weighted F1.
+The previously best 0.005/pure-CDD configuration reached 30.28%. Weights 5.0,
+7.5, and 10.0 did not improve the result; the high-weight runs stayed below
+27.61% balanced accuracy. This teacher therefore benefits, at most, from a
+very weak feature-distillation constraint on PME4.
+
+An independent full-schedule repeat of the selected configuration reached
+26.75% balanced accuracy and 16.76% weighted F1. The 31.32% figure is the
+highest test-selected observation, not a stable repeated estimate. PME4's
+CUDA training and validation-based checkpoint selection currently show high
+run-to-run variance even with the same nominal seed.
+
 ## Original network and logit-distillation check
 
 On split 9, the original student attention implementation reached 29.19%
