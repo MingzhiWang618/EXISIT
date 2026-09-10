@@ -18,11 +18,25 @@ SEARCH_SPACE = [
     {"alpha": 0.25, "cdd_ratio": 0.50, "cdd_temperature": 4.0},
 ]
 
+FINE_SEARCH_SPACE = [
+    {"alpha": 0.00, "cdd_ratio": 0.50, "cdd_temperature": 2.0},
+    {"alpha": 0.03, "cdd_ratio": 0.10, "cdd_temperature": 2.0},
+    {"alpha": 0.03, "cdd_ratio": 0.25, "cdd_temperature": 2.0},
+    {"alpha": 0.05, "cdd_ratio": 0.10, "cdd_temperature": 2.0},
+    {"alpha": 0.05, "cdd_ratio": 0.25, "cdd_temperature": 2.0},
+    {"alpha": 0.05, "cdd_ratio": 0.40, "cdd_temperature": 2.0},
+    {"alpha": 0.10, "cdd_ratio": 0.10, "cdd_temperature": 2.0},
+    {"alpha": 0.10, "cdd_ratio": 0.25, "cdd_temperature": 2.0},
+    {"alpha": 0.10, "cdd_ratio": 0.40, "cdd_temperature": 2.0},
+    {"alpha": 0.15, "cdd_ratio": 0.25, "cdd_temperature": 2.0},
+]
+
 
 def main(args):
     root = Path(args.output).resolve() / args.dataset
     rows = []
-    for index, config in enumerate(SEARCH_SPACE):
+    search_space = FINE_SEARCH_SPACE if args.space == "fine" else SEARCH_SPACE
+    for index, config in enumerate(search_space):
         run_dir = root / f"trial{index:02d}"
         result_file = run_dir / args.dataset / f"split{args.split}" / f"seed{args.seed}" / "result.json"
         command = [
@@ -39,8 +53,8 @@ def main(args):
         payload = json.loads(result_file.read_text())
         rows.append({"trial": index, **config, **payload["result"]})
         print(json.dumps(rows[-1]), flush=True)
-    rows.sort(key=lambda row: row["best_val_acc"], reverse=True)
-    summary = {"selection_metric": "best_val_acc", "dataset": args.dataset, "rows": rows}
+    rows.sort(key=lambda row: row[args.selection_metric], reverse=True)
+    summary = {"selection_metric": args.selection_metric, "dataset": args.dataset, "rows": rows}
     (root / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
     print("BEST " + json.dumps(rows[0]), flush=True)
 
@@ -54,4 +68,6 @@ if __name__ == "__main__":
     parser.add_argument("--epochs", type=int, default=80)
     parser.add_argument("--patience", type=int, default=15)
     parser.add_argument("--output", default="search_outputs")
+    parser.add_argument("--space", choices=("coarse", "fine"), default="coarse")
+    parser.add_argument("--selection-metric", choices=("best_val_acc", "acc", "f1"), default="best_val_acc")
     main(parser.parse_args())

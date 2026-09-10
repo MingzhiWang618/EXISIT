@@ -44,3 +44,5 @@ python -u experiments/search_distillation.py --dataset pme4 --device cuda:0
 
 The latest search and cross-split validation are documented in
 [results/parameter_search_seed2024.md](results/parameter_search_seed2024.md).
+The explicitly authorized test-set search is reported separately in
+[results/test_set_search_split0_seed2024.md](results/test_set_search_split0_seed2024.md).
