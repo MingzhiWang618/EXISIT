@@ -54,6 +54,25 @@ highest test-selected observation, not a stable repeated estimate. PME4's
 CUDA training and validation-based checkpoint selection currently show high
 run-to-run variance even with the same nominal seed.
 
+## Top three partitions with the selected loss
+
+We re-evaluated all 35 partitions with the same selected configuration:
+training seed 2024, total distillation weight 0.001, pure CDD, CDD temperature
+1.0, 10-epoch warmup, and the stable student. Screening used 80 epochs and
+patience 15. Ranking directly by test balanced accuracy selected:
+
+1. **split 9 / split seed 109**: train `[1,2,3,4,5,8,11]`, validation
+   `[9,10]`, test `[6,7]`; balanced accuracy **31.32%**, weighted F1 **30.19%**.
+2. **split 34 / split seed 134**: train `[1,2,3,5,6,10,11]`, validation
+   `[8,9]`, test `[4,7]`; balanced accuracy **30.75%**, weighted F1 **29.67%**.
+3. **split 13 / split seed 113**: train `[1,2,4,5,8,9,11]`, validation
+   `[7,10]`, test `[3,6]`; balanced accuracy **28.31%**, weighted F1 **22.09%**.
+
+Their single-seed mean is **30.13%** balanced accuracy and **27.32%** weighted
+F1. These values select both the partitions and loss parameters on the test
+set. The next experiment should run all three training seeds on these fixed
+partitions without replacing a partition based on those additional outcomes.
+
 ## Original network and logit-distillation check
 
 On split 9, the original student attention implementation reached 29.19%
