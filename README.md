@@ -49,5 +49,9 @@ The explicitly authorized test-set search is reported separately in
 PME4 split, optimizer, and training-seed searches are summarized in
 [results/pme4_split_search.md](results/pme4_split_search.md).
 
+The complete PME4 baseline table on the selected split 9 and split 34 is in
+[results/pme4_baselines_top2.md](results/pme4_baselines_top2.md), with the
+machine-readable aggregate in `results/pme4_baselines_top2.json`.
+
 The candidate runner can compare `--student-architecture original` and
 `stable`, and can enable teacher-output distillation with `--logit-weight`.
