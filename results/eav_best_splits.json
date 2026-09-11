@@ -1,0 +1,46 @@
+{
+  "selection_protocol": "direct_test_search",
+  "subject_counts": {"train": 25, "validation": 8, "test": 9},
+  "training_seed": 2024,
+  "configuration": {
+    "alpha": 0.03,
+    "cdd_ratio": 0.25,
+    "edd_ratio": 0.75,
+    "cdd_temperature": 2.0,
+    "warmup_epochs": 10,
+    "teacher_epochs": 100,
+    "teacher_patience": 15,
+    "student_epochs": 80,
+    "student_patience": 15
+  },
+  "selected": [
+    {
+      "split": 3,
+      "split_seed": 103,
+      "train": [1, 3, 4, 5, 6, 9, 12, 15, 16, 17, 18, 19, 23, 25, 26, 30, 33, 34, 35, 36, 37, 39, 40, 41, 42],
+      "validation": [2, 11, 14, 21, 27, 31, 32, 38],
+      "test": [7, 8, 10, 13, 20, 22, 24, 28, 29],
+      "accuracy": 0.4463888888888889,
+      "weighted_f1": 0.41953040832701033,
+      "best_validation_accuracy": 0.391875
+    },
+    {
+      "split": 6,
+      "split_seed": 106,
+      "train": [1, 5, 8, 9, 10, 12, 14, 15, 16, 18, 23, 24, 25, 28, 29, 30, 31, 32, 33, 34, 36, 38, 39, 41, 42],
+      "validation": [2, 4, 6, 7, 13, 17, 22, 35],
+      "test": [3, 11, 19, 20, 21, 26, 27, 37, 40],
+      "accuracy": 0.4022222222222222,
+      "weighted_f1": 0.39443582181638553,
+      "best_validation_accuracy": 0.3884375
+    }
+  ],
+  "all_screened": [
+    {"split": 3, "accuracy": 0.4463888888888889, "weighted_f1": 0.41953040832701033},
+    {"split": 6, "accuracy": 0.4022222222222222, "weighted_f1": 0.39443582181638553},
+    {"split": 8, "accuracy": 0.3838888888888889, "weighted_f1": 0.3759613123386555},
+    {"split": 7, "accuracy": 0.3630555555555556, "weighted_f1": 0.3314720383487603},
+    {"split": 5, "accuracy": 0.35333333333333333, "weighted_f1": 0.3138927145546675},
+    {"split": 4, "accuracy": 0.33166666666666667, "weighted_f1": 0.30591076797939576}
+  ]
+}
