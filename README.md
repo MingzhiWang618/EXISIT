@@ -53,5 +53,9 @@ The complete PME4 baseline table on the selected split 9 and split 34 is in
 [results/pme4_baselines_top2.md](results/pme4_baselines_top2.md), with the
 machine-readable aggregate in `results/pme4_baselines_top2.json`.
 
+The complete EAV baseline table on selected splits 3, 17, and 6 is in
+[results/eav_baselines_selected3.md](results/eav_baselines_selected3.md), with
+the machine-readable aggregate in `results/eav_baselines_selected3.json`.
+
 The candidate runner can compare `--student-architecture original` and
 `stable`, and can enable teacher-output distillation with `--logit-weight`.
