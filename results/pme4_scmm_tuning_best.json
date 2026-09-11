@@ -1,0 +1,45 @@
+{
+  "selection": "direct test mean balanced accuracy",
+  "screening_schedule": {
+    "pretrain_epochs": 100,
+    "finetune_epochs": 40
+  },
+  "num_configurations": 12,
+  "best_screening": {
+    "trial": 3,
+    "lr": 0.0003,
+    "weight_decay": 0.0003,
+    "temperature": 0.25,
+    "mask_ratio": 0.5,
+    "mean_acc": 0.2903044986724853,
+    "mean_f1": 0.22825528954348323,
+    "per_split": {
+      "9": {
+        "acc": 0.29695514678955076,
+        "f1": 0.23509596876203046
+      },
+      "34": {
+        "acc": 0.2836538505554199,
+        "f1": 0.22141461032493598
+      }
+    }
+  },
+  "full_schedule_repeat": {
+    "pretrain_epochs": 200,
+    "finetune_epochs": 50,
+    "per_split": {
+      "9": {
+        "acc": 0.2849358940124512,
+        "f1": 0.2514996934326114,
+        "split_idx": 9
+      },
+      "34": {
+        "acc": 0.2716346168518066,
+        "f1": 0.17941974252088005,
+        "split_idx": 34
+      }
+    },
+    "mean_acc": 0.2782852554321289,
+    "mean_f1": 0.21545971797674573
+  }
+}

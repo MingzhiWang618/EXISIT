@@ -25,6 +25,7 @@ pme4_weight_search_wide/
 pme4_weight_search_fine/
 pme4_weight_best_full/
 pme4_split_ranking/
+pme4_scmm_search/
 
 # cache
 __pycache__/
