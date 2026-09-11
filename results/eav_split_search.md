@@ -14,8 +14,9 @@ distillation warmup.
 | 5 | 5 | 105 | 35.33% | 31.39% | 43.41% |
 | 6 | 4 | 104 | 33.17% | 30.59% | 45.09% |
 
-The selected cohorts and machine-readable configuration are in
-`results/eav_best_splits.json`. Split 3 and split 6 meet the requested target.
+The three selected cohorts are splits 3, 6, and 8. Their mean test accuracy is
+**41.08%** and their mean weighted F1 is **39.66%**. The complete subject lists
+and machine-readable configuration are in `results/eav_best_splits.json`.
 
 These numbers are **test-optimized exploratory results** because test accuracy
 was used to rank the subject splits. They must be labeled as such and should not
