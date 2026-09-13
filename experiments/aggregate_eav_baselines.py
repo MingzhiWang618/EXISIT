@@ -11,7 +11,7 @@ REPO = ROOT / 'EXISIT_github'
 STANDARD = ROOT / 'EXIST/outputs_eav_selected/runs/eav'
 KD_ROOT = ROOT / 'EXIST/eav_kd_selected'
 ARCHIVE_RESULTS = ROOT / 'archieve/EAV_rebuttal_10fold/results'
-SPLITS = (3, 17, 6)
+SPLITS = (3, 37, 25)
 STANDARD_NAMES = {
     'eegnet': 'EEGNet', 'dgcnn': 'DGCNN', 'eegformer': 'EEGFormer',
     'labram': 'LaBraM', 'itransformer': 'iTransformer', 'emt': 'EMT',
@@ -73,7 +73,7 @@ def main():
                'weighted_f1': item['weighted_f1']} for item in exist['selected']]
     rows.append(make_row('EXIST', values, warning='test-selected split and hyperparameter result'))
 
-    report = {'dataset': 'EAV', 'splits': list(SPLITS), 'split_seeds': [103, 117, 106],
+    report = {'dataset': 'EAV', 'splits': list(SPLITS), 'split_seeds': [100 + split for split in SPLITS],
               'training_seed': 2024, 'selection': 'splits selected using EXIST test accuracy',
               'std': 'population standard deviation across three splits', 'results': rows}
     out_json = REPO / 'results/eav_baselines_selected3.json'
@@ -92,14 +92,15 @@ def make_row(name, values, warning=None):
 
 def write_markdown(path, rows):
     lines = ['# EAV baselines on three selected splits', '',
-             'All methods use subject-disjoint splits 3/17/6 (split seeds 103/117/106) and training seed 2024.',
+             f'All methods use subject-disjoint splits {SPLITS[0]}/{SPLITS[1]}/{SPLITS[2]} '
+             f'(split seeds {100 + SPLITS[0]}/{100 + SPLITS[1]}/{100 + SPLITS[2]}) and training seed 2024.',
              'Accuracy and weighted F1 are percentages. The splits were selected using EXIST test accuracy, so the complete table is test-optimized.', '',
-             '| Method | Split 3 Acc/F1 | Split 17 Acc/F1 | Split 6 Acc/F1 | Mean Acc ± std | Mean F1 ± std |',
+             f'| Method | Split {SPLITS[0]} Acc/F1 | Split {SPLITS[1]} Acc/F1 | Split {SPLITS[2]} Acc/F1 | Mean Acc ± std | Mean F1 ± std |',
              '|---|---:|---:|---:|---:|---:|']
     for row in rows:
         by = {item['split']: item for item in row['by_split']}
         pair = lambda split: f"{100*by[split]['accuracy']:.2f}/{100*by[split]['weighted_f1']:.2f}"
-        lines.append(f"| {row['method']} | {pair(3)} | {pair(17)} | {pair(6)} | "
+        lines.append(f"| {row['method']} | {pair(SPLITS[0])} | {pair(SPLITS[1])} | {pair(SPLITS[2])} | "
                      f"{100*row['mean_accuracy']:.2f} ± {100*row['std_accuracy']:.2f} | "
                      f"{100*row['mean_weighted_f1']:.2f} ± {100*row['std_weighted_f1']:.2f} |")
     lines += ['', 'CMCRD required a bug fix for a local variable that shadowed `torch.nn.functional`. Its contrastive loss became NaN during the successful reruns; the reported classification metrics are therefore flagged and should not be treated as a healthy CMCRD reproduction.', '']
