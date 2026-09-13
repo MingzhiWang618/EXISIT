@@ -8,6 +8,7 @@ REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 from exist_method.distillation import DistillationConfig, StableDistillationLoss
 from exist_method.architecture_ablation import configure_student, configure_teacher
+from exist_method.window_ablation import configure_eav_window
 
 def load(name, path):
     spec=importlib.util.spec_from_file_location(name,path); mod=importlib.util.module_from_spec(spec)
@@ -21,6 +22,9 @@ def main(a):
     sys.path.insert(0, str(archive))
     sys.path.insert(0, str(source))
     original=load(f"candidate_{a.dataset}",source/f"run_{a.dataset}_distill.py")
+    if a.dataset == "eav" and a.window_seconds is not None:
+        import dataset.dataset as dataset_module
+        configure_eav_window(dataset_module.CrossSubjectMultiModalDataset, a.window_seconds)
     archived_student_class=original.ST_GCLSTM
     teacher_file=archive/("multimodal" if a.dataset=="eav" else "PME4")/"model"/"Teacher.py"
     teacher_mod=load(f"frozen_teacher_{a.dataset}",teacher_file)
@@ -88,6 +92,7 @@ if __name__=="__main__":
     p.add_argument("--student-architecture",choices=("original","stable"),default="stable")
     p.add_argument("--alpha-injection", choices=("row", "element", "column"), default="column")
     p.add_argument("--use-pcc", action=argparse.BooleanOptionalAction, default=True)
+    p.add_argument("--window-seconds", type=float)
     p.add_argument("--epochs",type=int)
     p.add_argument("--patience",type=int)
     p.add_argument("--lr",type=float)
