@@ -1,0 +1,73 @@
+{
+  "training_seed": 2024,
+  "ablation": "alpha=0 (cross-entropy only)",
+  "student_architecture": "stable",
+  "no_distillation": {
+    "eav": {
+      "by_split": [
+        {
+          "split": 3,
+          "accuracy": 0.4527777777777778,
+          "weighted_f1": 0.4345069175426267,
+          "best_validation_accuracy": 0.3809375
+        },
+        {
+          "split": 37,
+          "accuracy": 0.4063888888888889,
+          "weighted_f1": 0.3933415080749102,
+          "best_validation_accuracy": 0.3453125
+        },
+        {
+          "split": 25,
+          "accuracy": 0.3925,
+          "weighted_f1": 0.37330846235122117,
+          "best_validation_accuracy": 0.425625
+        }
+      ],
+      "mean_accuracy": 0.4172222222222222,
+      "std_accuracy": 0.025773027978749707,
+      "mean_weighted_f1": 0.4003856293229194,
+      "std_weighted_f1": 0.025475837736583642
+    },
+    "pme4": {
+      "by_split": [
+        {
+          "split": 9,
+          "accuracy": 0.2751010101010101,
+          "weighted_f1": 0.22485620311717053,
+          "best_validation_accuracy": 0.2775
+        },
+        {
+          "split": 34,
+          "accuracy": 0.28,
+          "weighted_f1": 0.2313664596273292,
+          "best_validation_accuracy": 0.2560353535353535
+        }
+      ],
+      "mean_accuracy": 0.27755050505050505,
+      "std_accuracy": 0.0024494949494949514,
+      "mean_weighted_f1": 0.22811133137224987,
+      "std_weighted_f1": 0.0032551282550793426
+    }
+  },
+  "with_distillation_reference": {
+    "eav": {
+      "mean_accuracy": 0.41490740740740745,
+      "mean_weighted_f1": 0.40043682314798007
+    },
+    "pme4": {
+      "mean_accuracy": 0.31034090909090906,
+      "mean_weighted_f1": 0.29930466505968706
+    }
+  },
+  "delta_no_distillation_minus_distillation": {
+    "eav": {
+      "accuracy": 0.0023148148148147696,
+      "weighted_f1": -5.119382506069137e-05
+    },
+    "pme4": {
+      "accuracy": -0.03279040404040401,
+      "weighted_f1": -0.07119333368743719
+    }
+  }
+}
