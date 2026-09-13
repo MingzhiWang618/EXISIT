@@ -25,6 +25,6 @@ This run fixes PME4 to split 9 (split seed 109) and split 34 (split seed 134). A
 | DMMR | 24.06 / 20.58 | 23.25 / 20.05 | 23.66 ± 0.41 | 20.31 ± 0.26 |
 | RGNN | 20.80 / 12.93 | 25.50 / 17.17 | 23.15 ± 2.35 | 15.05 ± 2.12 |
 
-For reference, the test-selected EXIST screening observations on these same splits are 31.32/30.19 (split 9) and 30.75/29.67 (split 34), giving 30.13 balanced accuracy and 29.93 weighted F1 across the two splits. These EXIST values and the split choice were optimized against the test set.
+For reference, the test-selected EXIST screening observations on these same splits are 31.32/30.19 (split 9) and 30.75/29.67 (split 34), giving 31.03 balanced accuracy and 29.93 weighted F1 across the two splits. These EXIST values and the split choice were optimized against the test set.
 
 The shared KD and CDGKD teachers were trained separately for each split before dependent methods. SCMM and DMMR were explicitly corrected from their historical default seeds (42 and 3) to seed 2024. STRFL required batch size 2 on split 34 because only 11.2 GiB GPU memory was free; split 9 used its original batch size 4. All other method settings follow the archived rebuttal implementations.
