@@ -7,6 +7,7 @@ import torch
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 from exist_method.distillation import DistillationConfig, StableDistillationLoss
+from exist_method.architecture_ablation import configure_student, configure_teacher
 
 def load(name, path):
     spec=importlib.util.spec_from_file_location(name,path); mod=importlib.util.module_from_spec(spec)
@@ -23,10 +24,10 @@ def main(a):
     archived_student_class=original.ST_GCLSTM
     teacher_file=archive/("multimodal" if a.dataset=="eav" else "PME4")/"model"/"Teacher.py"
     teacher_mod=load(f"frozen_teacher_{a.dataset}",teacher_file)
-    original.TeacherModel=teacher_mod.TeacherModel
+    original.TeacherModel=configure_teacher(teacher_mod, a.alpha_injection, a.use_pcc)
     student_mod=load(f"maintained_student_{a.dataset}",REPO/("multimodal" if a.dataset=="eav" else "PME4")/"model"/"Student.py")
     original.ST_GCLSTM=(archived_student_class if a.student_architecture=="original"
-                        else student_mod.ST_GCLSTM)
+                        else configure_student(student_mod, a.use_pcc))
     if a.dataset=="pme4": original.DATA_ROOT=a.pme4_data
     output=Path(a.output).resolve()/a.dataset/f"split{a.split}"/f"seed{a.seed}"
     ckpt=output/"checkpoints"; ckpt.mkdir(parents=True,exist_ok=True); original.CKPT_DIR=str(ckpt)
@@ -85,6 +86,8 @@ if __name__=="__main__":
     p.add_argument("--logit-weight",type=float,default=0.0)
     p.add_argument("--logit-temperature",type=float,default=2.0)
     p.add_argument("--student-architecture",choices=("original","stable"),default="stable")
+    p.add_argument("--alpha-injection", choices=("row", "element", "column"), default="column")
+    p.add_argument("--use-pcc", action=argparse.BooleanOptionalAction, default=True)
     p.add_argument("--epochs",type=int)
     p.add_argument("--patience",type=int)
     p.add_argument("--lr",type=float)

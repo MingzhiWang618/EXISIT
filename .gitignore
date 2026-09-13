@@ -27,6 +27,7 @@ pme4_weight_best_full/
 pme4_split_ranking/
 pme4_scmm_search/
 eav_split_search/
+ablations/
 
 # cache
 __pycache__/
